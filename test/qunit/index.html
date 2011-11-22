@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+            "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+      <link rel="stylesheet" type="text/css" href="css/qunit.css" />
+      <script type='text/javascript' src='js/qunit.js'></script>
+
+      <!-- core files -->
+      <script type='text/javascript' src='js/mootools.js'></script>
+      <script type='text/javascript' src='js/underscore.js'></script>
+      <script type='text/javascript' src='../src/moovoodoo.js'></script>
+
+      <!-- test files -->
+      <script type="text/javascript" src="qunit/events.js"></script>
+      <script type="text/javascript" src="qunit/model.js"></script>
+      <script type="text/javascript" src="qunit/collection.js"></script>
+      <!-- <script type="text/javascript" src="qunit/view.js"></script> -->
+      <!-- <script type="text/javascript" src="qunit/sync.js"></script> -->
+
+    </head>
+    <body>
+
+    <h1 id="qunit-header">Moovoodoo Test Suite</h1>
+  	<h2 id="qunit-banner"></h2>
+  	<div id="qunit-testrunner-toolbar"></div>
+  	<h2 id="qunit-userAgent"></h2>
+    <ol id="qunit-tests"></ol>
+  	<div id="qunit-test-area"></div>
+
+    <script type="text/javascript">
+      // Variable to catch the last request.
+      window.lastRequest = {};
+      window.originalRequestJson = Request.JSON;
+      Request.JSON = new Class({
+        initialize: function(options){
+          this.options = options;
+        },
+        send      : function(){
+          this.options.onSuccess && this.options.onSuccess();
+        }
+      });
+
+      window.originalSync = Moovoodoo.Sync;
+      Moovoodoo.Sync = {};
+      var request = ['create','read','update','destroy']
+      request.each(function(req){
+        Moovoodoo.Sync[req] = function(model,options){
+          lastRequest.model = model;
+          lastRequest.type  = req;
+          originalSync[req](model, options);
+        };
+      }); 
+    </script>
+    
+    </body>
+</html>
