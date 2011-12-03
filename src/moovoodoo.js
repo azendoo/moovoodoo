@@ -39,7 +39,7 @@ Moovoodoo.Events = new Class({
     return this;
   }
 
-})
+});
 
 // -- Moovoodoo.Sync
 Moovoodoo.Sync = new Class({
@@ -66,7 +66,7 @@ Moovoodoo.Sync = new Class({
       options.emulation = false;
       options.method    = 'PUT';
       options.url       = Moovoodoo.rootUrl + getUrl(model);
-      options.data      = JSON.stringify(model.toJSON());
+      options.data      = model.toJSON();
       new Request.JSON(options).send(); 
     },
 
@@ -75,7 +75,7 @@ Moovoodoo.Sync = new Class({
       options.emulation = false;
       options.method    = 'DELETE';
       options.url       = Moovoodoo.rootUrl + getUrl(model);
-      new Request(options).send();
+      new Request.JSON(options).send();
     }
   }
 });
@@ -103,6 +103,7 @@ Moovoodoo.Model = new Class({
     this._changed = false;
     this._previousAttributes = _.clone(this.attributes);
     if (options && options.collection) this.collection = options.collection;
+    if (this.setup) this.setup(attributes);
   },
 
   escape : function(attr) {
@@ -218,7 +219,7 @@ Moovoodoo.Model = new Class({
     var model = this;
     var onSuccess = options.onSuccess;
     options.onSuccess = function(resp, status, xhr) {
-      if (!model.set(model.parse(resp, xhr), options)) return false;
+      if (!model.set(model.parse(resp), options)) return false;
       if (onSuccess) onSuccess(model, resp);
     };
     options.onError = wrapError(options.onError, model, options);
@@ -276,7 +277,7 @@ Moovoodoo.Model = new Class({
     var model = this;
     var success = options.onSuccess;
     options.onSuccess = function(resp) {
-      if (!model.set(resp, options)) return false;
+      if (!model.set(model.parse(resp), options)) return false;
       if (success) success(model, resp);
     };
     options.onError = wrapError(options.onError, model, options);
@@ -285,6 +286,12 @@ Moovoodoo.Model = new Class({
       return this.sync.call(this, method, this, options);
     else
       return Moovoodoo.Sync[method](this, options);
+  },
+
+  // **parse** converts a response into a list of models to be added to the
+  // collection. The default implementation is just to pass it through.
+  parse : function(responseJSON) {
+    return responseJSON;
   },
 
   destroy : function(options) {
@@ -358,6 +365,10 @@ Moovoodoo.Collection = new Class({
     model = this._prepareModel(model, options);
     if (!model) return false;
     var onSuccess = options.onSuccess;
+    options.onSuccess = function(resp) {
+      this.add(resp, options);
+      if (onSuccess) onSuccess(this, resp);
+    }.bind(this);
     model.save(null, options);
     return model;
   },
@@ -365,21 +376,27 @@ Moovoodoo.Collection = new Class({
   fetch: function(options){
     options || (options = {});
     var onSuccess = options.onSuccess;
-    options.onSuccess = function(json,text){
-      this.add(json);
-      onSuccess && onSuccess(json,text);
+    options.onSuccess = function(resp){
+      this[options.add ? 'add' : 'reset'](this.parse(resp),options);
+      if(onSuccess) onSuccess(this, resp);
     }.bind(this);
-    Moovoodoo.Sync.read(this,{},options);
+    return (this.sync || Moovoodoo.Sync).read(this,{},options);
   },
 
   reset : function(models, options) {
     models  || (models = []);
     options || (options = {});
-    this.each(this._removeReference);
+    this.each(this._removeReference.bind(this));
     this._reset();
     this.add(models, {silent: true});
     if (!options.silent) this.fireEvent('reset', { collection: this, options: options } );
     return this;
+  },
+
+  // **parse** converts a response into a list of models to be added to the
+  // collection. The default implementation is just to pass it through.
+  parse : function(resp) {
+    return resp;
   },
 
   add: function(models,options){

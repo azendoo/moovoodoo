@@ -8,6 +8,8 @@ App.Model.Todo = new Class({
   
   Extends: Moovoodoo.Model,
 
+  name: 'task',
+
   defaults: {
     content: "empty todo...",
     done: false
@@ -28,7 +30,6 @@ App.Model.Todo = new Class({
     this.destroy();
     this.view.remove();
   }
-
 });
 
 App.Collection.TodoList = new Class({
@@ -37,9 +38,15 @@ App.Collection.TodoList = new Class({
 
   model: App.Model.Todo,
 
-  url: function(){
-    return '/tasks';
-  } 
+  url: function(){ return '/tasks'; },
+
+  done: function() {
+    return this.filter(function(todo){ return todo.get('done'); });
+  },
+
+  remaining: function() {
+    return this.without.apply(this, this.done());
+  }
 
 });
 
@@ -120,6 +127,7 @@ App.Controller.Main = new Class({
     "click .todo-clear a": "clearCompleted"
   },
 
+  statsTemplate: _.template(document.getElement('#stats-template').get('html')),
 
   initialize: function(element){
     this.element = element;
@@ -135,7 +143,11 @@ App.Controller.Main = new Class({
   },
 
   render: function(){
-    console.log('render');
+    document.getElement('#todo-stats').set('html', this.statsTemplate({
+      total:      Todos.length,
+      done:       Todos.done().length,
+      remaining:  Todos.remaining().length
+    }));
   },
 
   addOne: function(todo){
@@ -156,18 +168,15 @@ App.Controller.Main = new Class({
 
   createOnEnter: function(event) {
     if (event.key != 'enter') return;
-    console.log('createOnEnter');
     Todos.create(this.newAttributes());
     this.inputEl.set('value','');
   },
 
   showTooltip: function(){
-    console.log('showtooltip');
     var tooltip = this.element.getElement(".ui-tooltip-top");
     var val = this.inputEl.get('value');
     if (this.tooltipTimeout) clearTimeout(this.tooltipTimeout);
     if (val == '' || val == this.inputEl.get('placeholder')) return;
-    //this.tooltipTimeout = _.delay(function(){ tooltip.show(); }, 1000);
   },
 
   clearCompleted: function(){

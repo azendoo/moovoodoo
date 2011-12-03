@@ -7,7 +7,10 @@
     <script src="/moovoodoo/test/js/mootools.js"></script>
     <script src="/moovoodoo/test/js/mootools-more.js"></script>
     <script src="/moovoodoo/test/js/underscore.js"></script>
+
     <script src="/moovoodoo/src/moovoodoo.js"></script>
+    <script src="/moovoodoo/src/moovoodoo.rails_modelname.js"></script>
+
     <script src="/moovoodoo/test/js/todos.js"></script>
   </head>
 
@@ -48,9 +51,9 @@
     <!-- Templates -->
 
     <script type="text/template" id="item-template">
-      <div class="todo <%= done ? 'done' : '' %>">
+      <div class="todo <%= task.done ? 'done' : '' %>">
         <div class="display">
-          <input class="check" type="checkbox" <%= done ? 'checked="checked"' : '' %> />
+          <input class="check" type="checkbox" <%= task.done ? 'checked="checked"' : '' %> />
           <div class="todo-content"></div>
           <span class="todo-destroy"></span>
         </div>
@@ -69,7 +72,7 @@
       <% } %>
       <% if (done) { %>
         <span class="todo-clear">
-          <a href="#">
+          <a href="javascript://">
             Clear <span class="number-done"><%= done %></span>
             completed <span class="word-done"><%= done == 1 ? 'item' : 'items' %></span>
           </a>
