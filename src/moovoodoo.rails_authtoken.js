@@ -1,1 +1,0 @@
-Moovoodoo.Rails_AuthToken = {};
