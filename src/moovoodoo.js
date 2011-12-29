@@ -44,53 +44,40 @@ Moovoodoo.Events = new Class({
 
 });
 
+var methodMap = {
+  'create' : 'POST',
+  'update' : 'PUT',
+  'destroy': 'DELETE',
+  'read'   : 'GET'
+};
+
 // -- Moovoodoo.Sync
-Moovoodoo.Sync = new Class({
-  Static: {
+Moovoodoo.sync = function(method, model, options){
+  var type = methodMap[method];
 
-    // method called before sendind datas
-    prepareBeforeSync: function(options){
-      return options;
-    },
-    
-    create: function(model, options){
-      !options && ( options = {} );
-      options.url    = Moovoodoo.rootUrl + getUrl(model);
-      options.method = 'POST';
-      options.data   = model.serialize();
-      options        = Moovoodoo.Sync.prepareBeforeSync(options);
-      new Request.JSON(options).send();
-    },
+  // Default JSON-request options.
+  var params = {method : type, emulation: false};
 
-    read: function(model, params, options){
-      !options && ( options = {} );
-      options.url    = Moovoodoo.rootUrl + getUrl(model);
-      options.method = 'GET';
-      options.data   = params;
-      options        = Moovoodoo.Sync.prepareBeforeSync(options);
-      new Request.JSON(options).send();
-    },
-
-    update: function(model, options){
-      !options && ( options = {} );
-      options.emulation = false;
-      options.method    = 'PUT';
-      options.url       = Moovoodoo.rootUrl + getUrl(model);
-      options.data      = model.serialize();
-      options           = Moovoodoo.Sync.prepareBeforeSync(options);
-      new Request.JSON(options).send(); 
-    },
-
-    destroy: function(model, options){
-      !options && ( options = {} );
-      options.emulation = false;
-      options.method    = 'DELETE';
-      options.url       = Moovoodoo.rootUrl + getUrl(model);
-      options           = Moovoodoo.Sync.prepareBeforeSync(options);
-      new Request.JSON(options).send();
-    }
+  // Ensure that we have the appropriate request data.
+  if (!options.data && model && (method == 'create' || method == 'update')) {
+    params.data = model.serialize();
   }
-});
+
+  // Ensure that we have a URL.
+  if (!options.url) {
+    params.url = Moovoodoo.rootUrl + getUrl(model) || urlError();
+  }
+
+  // retrieve options
+  !options && ( options = {} );
+  options  = Moovoodoo.sync.prepareBeforeSync(options);
+
+  return new Request.JSON(_.extend(params, options)).send();
+};
+
+
+// method called before sendind datas
+Moovoodoo.sync.prepareBeforeSync = function(options){ return options; }
 
 // -- Moovoodoo.Model
 Moovoodoo.Model = new Class({
@@ -235,10 +222,8 @@ Moovoodoo.Model = new Class({
       if (onSuccess) onSuccess(model, resp);
     };
     options.onError = wrapError(options.onError, model, options);
-    if(this.sync)
-      return this.sync.call(this, 'read', this, options);
-    else
-      return Moovoodoo.Sync['read'](this, {}, options);
+    
+    return (this.sync || Moovoodoo.sync).call(this, 'read', this, options);
   },
 
   changedAttributes : function(now) {
@@ -293,11 +278,9 @@ Moovoodoo.Model = new Class({
       if (success) success(model, resp);
     };
     options.onError = wrapError(options.onError, model, options);
-    var method = this.isNew() ? 'create' : 'update';
-    if(this.sync)
-      return this.sync.call(this, method, this, options);
-    else
-      return Moovoodoo.Sync[method](this, options);
+    var method = this.isNew() ? 'create' : 'update';    
+    
+    return (this.sync || Moovoodoo.sync).call(this, method, this, options);
   },
 
   // **parse** converts a response into a list of models to be added to the
@@ -321,10 +304,8 @@ Moovoodoo.Model = new Class({
       if (success) success(model, resp);
     };
     options.onError = wrapError(options.onError, model, options);
-    if(this.sync)
-      return this.sync.call(this, 'destroy', this, options);
-    else
-      return Moovoodoo.Sync['destroy'](this, options);
+
+    return (this.sync || Moovoodoo.sync).call(this,'destroy',this, options);
   },
 
   setUrl: function(url){
@@ -397,7 +378,7 @@ Moovoodoo.Collection = new Class({
       this[options.add ? 'add' : 'reset'](this.parse(resp),options);
       if(onSuccess) onSuccess(this, resp);
     }.bind(this);
-    return (this.sync || Moovoodoo.Sync).read(this, params, options);
+    return (this.sync || Moovoodoo.sync).call(this, 'read', this, options);
   },
 
   reset : function(models, options) {
